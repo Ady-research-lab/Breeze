@@ -61,12 +61,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y llvm-dev libclang-dev clang
 
-      # 无 GIT_CRYPT_KEY（Fork 仓库）。锁定状态下这两个文件是二进制密文，
-      # 而 build.gradle.kts 在配置阶段会无条件 Properties.load
-      # key.properties（随机字节可能导致解析异常）。直接删除使 gradle 走
-      # "无 key.properties" 分支，release 产出未签名 APK，构建本身成功。
-      - name: 移除 git-crypt 加密的签名文件
-        run: rm -f android/key.properties android/Breeze-key.keystore
+      # 无 GIT_CRYPT_KEY（Fork 仓库）。AGP 8.x 的 release 打包强制要求完整
+      # 签名配置（storeFile 为 null 不会产出未签名 APK，而是 packageRelease
+      # 直接失败），因此不能只删掉加密文件——改为现场生成一次性 keystore
+      # 与 key.properties，让 release 构建用临时签名通过（产物可安装但
+      # 与正式版签名不一致）。
+      - name: 生成临时签名（替代 git-crypt 解密）
+        run: |
+          rm -f android/key.properties android/Breeze-key.keystore
+          keytool -genkeypair -v \
+            -keystore android/Breeze-key.keystore \
+            -storepass breeze-dev -keypass breeze-dev \
+            -alias breeze -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Breeze Dev, OU=Dev, O=Dev, L=City, S=State, C=CN"
+          cat > android/key.properties <<EOF
+          storePassword=breeze-dev
+          keyPassword=breeze-dev
+          keyAlias=breeze
+          storeFile=Breeze-key.keystore
+          EOF
 
       - name: 设置 Java 21 & SDK
         uses: actions/setup-java@v5
