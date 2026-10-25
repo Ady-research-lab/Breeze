@@ -78,8 +78,10 @@ jobs:
           storePassword=breeze-dev
           keyPassword=breeze-dev
           keyAlias=breeze
-          storeFile=Breeze-key.keystore
+          storeFile=../Breeze-key.keystore
           EOF
+          # storeFile 以 app 模块目录(android/app)为基准解析，
+          # ../Breeze-key.keystore 即 android/Breeze-key.keystore。
 
       - name: 设置 Java 21 & SDK
         uses: actions/setup-java@v5
