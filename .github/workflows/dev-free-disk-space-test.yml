@@ -45,6 +45,14 @@ jobs:
           preinstalled-runtimes: true
           swap-storage: false
 
+      # android:true 会删掉整个 /usr/local/lib/android，而 setup-android 以
+      # runner 用户身份 mkdir（父目录 /usr/local/lib 为 root 属主）→ EACCES。
+      # 必须先以 sudo 重建 SDK 目录并交还属主（实测 2026-10 缺此步必挂）。
+      - name: 重建 Android SDK 目录 (setup-android 前置)
+        run: |
+          sudo mkdir -p /usr/local/lib/android/sdk
+          sudo chown -R $USER:$USER /usr/local/lib/android
+
       - name: 清理后磁盘状态
         run: df -h /
 
